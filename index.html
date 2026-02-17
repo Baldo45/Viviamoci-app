@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viviamoci</title>
+    <style>
+        :root {
+            --primary: #ff6b6b;
+            --bg: #f7f9fc;
+            --text: #333;
+            --done: #888;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin: 30px 0;
+            max-width: 600px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 3rem;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        p.subtitle {
+            font-size: 1.2rem;
+            font-style: italic;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        /* GALLERIA DINAMICA */
+        .gallery-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            max-width: 1000px;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .polaroid {
+            background: white;
+            padding: 10px 10px 35px 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 160px;
+            height: 200px;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+        }
+
+        /* Pulsante Aggiungi Foto (Stile Diverso) */
+        .add-photo-btn {
+            border: 2px dashed #ccc;
+            background: transparent;
+            box-shadow: none;
+            color: #aaa;
+            font-size: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .add-photo-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .polaroid:hover:not(.add-photo-btn) {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .polaroid img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none; /* Lascia passare il click al padre */
+        }
+
+        /* TASTO ELIMINA FOTO (X) */
+        .delete-photo-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff4444;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none; /* Mostra solo su hover */
+        }
+
+        .polaroid:hover .delete-photo-btn { display: block; }
+        .delete-photo-btn:hover { background: #cc0000; transform: scale(1.1); }
+
+        /* Rotazioni casuali solo per le foto vere (non il pulsante +) */
+        .polaroid:not(.add-photo-btn):nth-child(odd) { transform: rotate(-2deg); }
+        .polaroid:not(.add-photo-btn):nth-child(even) { transform: rotate(2deg); }
+
+
+        /* LIGHTBOX (ZOOM) */
+        #lightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
+        #lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border: 5px solid white;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            cursor: default;
+        }
+
+
+        /* LISTA */
+        .main-content {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255,255,255,0.8);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus { border-color: var(--primary); }
+
+        button#add-btn {
+            padding: 0 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        ul { list-style: none; padding: 0; }
+
+        li {
+            background: white;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Spazio tra testo e X */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        li:hover { transform: translateX(3px); }
+
+        /* Contenitore checkbox + testo */
+        .li-content {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        li.completed {
+            background: #f1f3f5;
+            color: var(--done);
+            text-decoration: line-through;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        .custom-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        li.completed .custom-checkbox { background-color: var(--primary); }
+        li.completed .custom-checkbox::after { content: '✓'; color: white; font-size: 12px; }
+
+        /* TASTO ELIMINA ITEM LISTA (X) */
+        .delete-item-btn {
+            color: #ff4444;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+            opacity: 0; /* Nascosto di default */
+            transition: opacity 0.2s;
+        }
+
+        li:hover .delete-item-btn { opacity: 1; } /* Mostra su hover */
+        .delete-item-btn:hover { background-color: #ffebeb; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Viviamoci</h1>
+        <p class="subtitle">"Simo ci ha fatto incontrare, ma ora tocca a noi approfittare di questa occasione"</p>
+    </header>
+
+    <!-- GALLERIA -->
+    <div class="gallery-container" id="gallery">
+        <!-- Le foto vengono caricate qui dinamicamente -->
+        
+        <!-- Pulsante sempre presente in fondo -->
+        <div class="polaroid add-photo-btn" onclick="document.getElementById('global-file-input').click()">
+            +
+        </div>
+    </div>
+    
+    <!-- Input nascosto unico per caricare foto -->
+    <input type="file" id="global-file-input" style="display: none;" accept="image/*" onchange="handleFileUpload(this)">
+
+    <!-- LISTA -->
+    <div class="main-content">
+        <div class="input-group">
+            <input type="text" id="new-item-input" placeholder="Aggiungi un nuovo ricordo...">
+            <button id="add-btn">+</button>
+        </div>
+        <ul id="checklist"></ul>
+    </div>
+
+    <!-- LIGHTBOX (Zoom) -->
+    <div id="lightbox" onclick="closeZoom()">
+        <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+    </div>
+
+<script>
+    /* --- GESTIONE FOTO ILLIMITATE --- */
+    let photoAlbum = JSON.parse(localStorage.getItem('viviamoci_album')) || [];
+
+    function renderGallery() {
+        const container = document.getElementById('gallery');
+        // Rimuoviamo tutte le polaroid tranne il pulsante "+"
+        const photos = container.querySelectorAll('.polaroid:not(.add-photo-btn)');
+        photos.forEach(p => p.remove());
+
+        // Pulsante "+"
+        const addBtn = container.querySelector('.add-photo-btn');
+
+        // Ricreiamo le foto dall'array
+        photoAlbum.forEach((photoData, index) => {
+            const div = document.createElement('div');
+            div.className = 'polaroid';
+            div.innerHTML = `
+                <div class="delete-photo-btn" onclick="deletePhoto(event, ${index})">×</div>
+                <img src="${photoData}">
+            `;
+            // Click sulla foto apre zoom
+            div.onclick = () => openZoom(photoData);
+            
+            // Inseriamo PRIMA del pulsante "+"
+            container.insertBefore(div, addBtn);
+        });
+    }
+
+    function handleFileUpload(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                // Compressione immagine
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const MAX_WIDTH = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const compressedData = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Aggiungi all'array e salva
+                    photoAlbum.push(compressedData);
+                    try {
+                        localStorage.setItem('viviamoci_album', JSON.stringify(photoAlbum));
+                        renderGallery();
+                    } catch (e) {
+                        alert("Memoria piena! Non posso salvare altre foto.");
+                        photoAlbum.pop(); // Annulla inserimento
+                    }
+                };
+            };
+            reader.readAsDataURL(file);
+            input.value = ''; // Reset input per poter ricaricare stessa foto
+        }
+    }
+
+    function deletePhoto(event, index) {
+        event.stopPropagation();
+        if(confirm("Eliminare questa foto?")) {
+            photoAlbum.splice(index, 1);
+            localStorage.setItem('viviamoci_album', JSON.stringify(photoAlbum));
+            renderGallery();
+        }
+    }
+
+    function openZoom(src) {
+        document.getElementById('lightbox-img').src = src;
+        document.getElementById('lightbox').style.display = "flex";
+    }
+    function closeZoom() {
+        document.getElementById('lightbox').style.display = "none";
+    }
+
+    /* --- GESTIONE LISTA --- */
+    const initialData = [
+        "Pronomi neutri", "Concezione lavoro", "Rapporto con i ragazzi", "Cuba", 
+        "Rapporto con emozioni di baldinino", "Effetti delle letture del signorino", 
+        "Chi quadrato", "Saggi di danza", "Insegnare a ballare --> renderlo una diva", 
+        "Miei soprannomi", "Cerretesi e Fabrianesi", "Roma", "Perequazione", 
+        "Numero donne in politica", "Bisessualità di Francy", "Donna-lavoro-famiglia", 
+        "Mangiare il chinese", "Ringraziamenti tesi", "25 aprile", "Balletto privato", 
+        "Punteggi", "Massaggino + calendario per Andre", "Cantina", "Mangiare pesce", 
+        "Escape room", "Test politica", "Andre insegnante", "Viaggi", "Dottorato Padova", 
+        "Incidente con bici", "Simon Droga", "Vendetta", "Eugenetica", 
+        "Mercato di Porta Galliera", "Gratificazioni", "Nave di teseo", "Ade", 
+        "Rocchetta Mattei", "Nucleare", "Regalo da parte di Andre", "Emozioni e razionalità", 
+        "Apollo kebab", "American pie", "Beirut", "Partito", "Pranzo with me alle Scudery", 
+        "Giochini particolari coppia", "Rapporti più stretti Francy", "Weekend con Simo", 
+        "Vedere nostri video trash", "Abbonamento tper", "Futuro lavorativo", "Regali", 
+        "Pinza Andrea", "Franciss", "Piano di studi di Francy", "Portare Francy alla Lidl", 
+        "L'estate sta finendo", "Cicatrice", "Andre lascia simo solo a dormire"
+    ];
+
+    let items = JSON.parse(localStorage.getItem('viviamoci_list')) || 
+                initialData.map(text => ({ text: text, done: false }));
+
+    const listElement = document.getElementById('checklist');
+    const inputElement = document.getElementById('new-item-input');
+    const addBtn = document.getElementById('add-btn');
+
+    function renderList() {
+        listElement.innerHTML = '';
+        const todo = items.filter(i => !i.done);
+        const done = items.filter(i => i.done);
+        const itemsToDisplay = [...todo, ...done];
+
+        itemsToDisplay.forEach((item) => {
+            const li = document.createElement('li');
+            if (item.done) li.classList.add('completed');
+            
+            const originalIndex = items.indexOf(item);
+
+            // Struttura HTML modificata per separare click su testo e click su elimina
+            li.innerHTML = `
+                <div class="li-content" onclick="toggleItem(${originalIndex})">
+                    <div class="custom-checkbox"></div>
+                    <span>${item.text}</span>
+                </div>
+                <div class="delete-item-btn" onclick="deleteListItem(event, ${originalIndex})">✕</div>
+            `;
+            listElement.appendChild(li);
+        });
+        localStorage.setItem('viviamoci_list', JSON.stringify(items));
+    }
+
+    function toggleItem(index) {
+        items[index].done = !items[index].done;
+        if(items[index].done) {
+            const item = items.splice(index, 1)[0];
+            items.push(item);
+        } else {
+            const item = items.splice(index, 1)[0];
+            items.unshift(item);
+        }
+        renderList();
+    }
+
+    function deleteListItem(event, index) {
+        event.stopPropagation(); // Evita che il click sulla X attivi il toggle
+        if(confirm("Eliminare definitivamente questo punto?")) {
+            items.splice(index, 1);
+            renderList();
+        }
+    }
+
+    function addItem() {
+        const text = inputElement.value.trim();
+        if (text) {
+            items.unshift({ text: text, done: false });
+            inputElement.value = '';
+            renderList();
+        }
+    }
+
+    addBtn.addEventListener('click', addItem);
+    inputElement.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addItem();
+    });
+
+    // Avvio
+    renderGallery();
+    renderList();
+
+</script>
+</body>
+</html>
